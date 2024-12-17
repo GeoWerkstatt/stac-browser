@@ -6,7 +6,7 @@
 
         <b-card-title v-if="title" :title="title" />
 
-        <b-form-group v-if="canFilterFreeText" :label="$t('search.freeText')" :label-for="ids.q" :description="$t('search.freeTextDescription')">
+        <b-form-group v-if="canFilterFreeText" class="filter-freetext" :label="$t('search.freeText')" :label-for="ids.q" :description="$t('search.freeTextDescription')">
           <multiselect
             :id="ids.q" :value="query.q" @input="setSearchTerms"
             multiple taggable :options="query.ids"
@@ -19,19 +19,19 @@
           </multiselect>
         </b-form-group>
 
-        <b-form-group v-if="canFilterExtents" :label="$t('search.temporalExtent')" :label-for="ids.datetime" :description="$t('search.dateDescription')">
+        <b-form-group v-if="canFilterExtents" class="filter-datetime" :label="$t('search.temporalExtent')" :label-for="ids.datetime" :description="$t('search.dateDescription')">
           <date-picker
             range :id="ids.datetime" :lang="datepickerLang" :format="datepickerFormat"
-            :value="query.datetime" @input="setDateTime" input-class="form-control mx-input"
+            v-model="datetime" input-class="form-control mx-input"
           />
         </b-form-group>
 
-        <b-form-group v-if="canFilterExtents" :label="$t('search.spatialExtent')" :label-for="ids.bbox">
+        <b-form-group v-if="canFilterExtents" class="filter-bbox" :label="$t('search.spatialExtent')" :label-for="ids.bbox">
           <b-form-checkbox :id="ids.bbox" v-model="provideBBox" value="1" @change="setBBox()">{{ $t('search.filterBySpatialExtent') }}</b-form-checkbox>
           <Map class="mb-4" v-if="provideBBox" :stac="stac" selectBounds @bounds="setBBox" scrollWheelZoom />
         </b-form-group>
 
-        <b-form-group v-if="conformances.CollectionIdFilter" :label="$tc('stacCollection', collections.length)" :label-for="ids.collections">
+        <b-form-group v-if="conformances.CollectionIdFilter" class="filter-collection" :label="$tc('stacCollection', collections.length)" :label-for="ids.collections">
           <multiselect
             v-bind="collectionSelectOptions"
             @input="setCollections"
@@ -49,7 +49,7 @@
           </multiselect>
         </b-form-group>
 
-        <b-form-group v-if="conformances.ItemIdFilter" :label="$t('search.itemIds')" :label-for="ids.ids">
+        <b-form-group v-if="conformances.ItemIdFilter" class="filter-item-id" :label="$t('search.itemIds')" :label-for="ids.ids">
           <multiselect
             :id="ids.ids" :value="query.ids" @input="setIds"
             multiple taggable :options="query.ids"
@@ -62,34 +62,32 @@
           </multiselect>
         </b-form-group>
 
-        <div class="additional-filters" v-if="showAdditionalFilters">
-          <b-form-group :label="$t('search.additionalFilters')">
-            <b-form-radio-group v-model="filtersAndOr" :options="andOrOptions" name="logical" size="sm" />
+        <b-form-group v-if="showAdditionalFilters" class="additional-filters" :label="$t('search.additionalFilters')">
+          <b-form-radio-group v-model="filtersAndOr" :options="andOrOptions" name="logical" size="sm" />
 
-            <b-dropdown size="sm" :text="$t('search.addFilter')" block variant="primary" class="queryables mt-2 mb-3" menu-class="w-100">
-              <template v-for="queryable in sortedQueryables">
-                <b-dropdown-item v-if="queryable.supported" :key="queryable.id" @click="additionalFieldSelected(queryable)">
-                  {{ queryable.title }}
-                  <b-badge variant="dark" class="ml-2">{{ queryable.id }}</b-badge>
-                </b-dropdown-item>
-              </template>
-            </b-dropdown>
+          <b-dropdown size="sm" :text="$t('search.addFilter')" block variant="primary" class="queryables mt-2 mb-3" menu-class="w-100">
+            <template v-for="queryable in sortedQueryables">
+              <b-dropdown-item v-if="queryable.supported" :key="queryable.id" @click="additionalFieldSelected(queryable)">
+                {{ queryable.title }}
+                <b-badge variant="dark" class="ml-2">{{ queryable.id }}</b-badge>
+              </b-dropdown-item>
+            </template>
+          </b-dropdown>
 
-            <QueryableInput
-              v-for="(filter, index) in filters" :key="filter.id"
-              :value.sync="filter.value"
-              :operator.sync="filter.operator"
-              :queryable="filter.queryable"
-              :index="index"
-              :cql="cql"
-              @remove-queryable="removeQueryable(index)"
-            />
-          </b-form-group>
-        </div>
+          <QueryableInput
+            v-for="(filter, index) in filters" :key="filter.id"
+            :value.sync="filter.value"
+            :operator.sync="filter.operator"
+            :queryable="filter.queryable"
+            :index="index"
+            :cql="cql"
+            @remove-queryable="removeQueryable(index)"
+          />
+        </b-form-group>
 
         <hr v-if="canFilterExtents || conformances.CollectionIdFilter || conformances.ItemIdFilter || showAdditionalFilters">
 
-        <b-form-group v-if="canSort" :label="$t('sort.title')" :label-for="ids.sort" :description="$t('search.notFullySupported')">
+        <b-form-group v-if="canSort" class="sort" :label="$t('sort.title')" :label-for="ids.sort" :description="$t('search.notFullySupported')">
           <multiselect
             :id="ids.sort" :value="sortTerm" @input="sortFieldSet"
             :options="sortOptions" track-by="value" label="text"
@@ -101,7 +99,7 @@
           <SortButtons v-if="sortTerm && sortTerm.value" class="mt-1" :value="sortOrder" enforce @input="sortDirectionSet" />
         </b-form-group>
 
-        <b-form-group :label="$t('search.itemsPerPage')" :label-for="ids.limit" :description="$t('search.itemsPerPageDescription', {maxItems})">
+        <b-form-group class="limit" :label="$t('search.itemsPerPage')" :label-for="ids.limit" :description="$t('search.itemsPerPageDescription', {maxItems})">
           <b-form-input
             :id="ids.limit" :value="query.limit" @change="setLimit" min="1"
             :max="maxItems" type="number"
@@ -261,8 +259,8 @@ export default {
     },
     andOrOptions() {
       return [
-        { value: 'and', text: this.$i18n.t('search.logical.and') },
-        { value: 'or', text: this.$i18n.t('search.logical.or') },
+        { value: 'and', text: this.$t('search.logical.and') },
+        { value: 'or', text: this.$t('search.logical.or') },
       ];
     },
     showAdditionalFilters() {
@@ -277,7 +275,19 @@ export default {
       ];
     },
     sortedQueryables() {
-      return this.queryables.slice(0).sort((a, b) => a.title.localeCompare(b.title));
+      if (!Array.isArray(this.queryables)) {
+        return [];
+      }
+      const collator = new Intl.Collator(this.uiLanguage);
+      return this.queryables.slice(0).sort((a, b) => collator.compare(a.title, b.title));
+    },
+    datetime: {
+      get() {
+        return Array.isArray(this.query.datetime) ? this.query.datetime.map(d => Utils.dateFromUTC(d)) : null;
+      },
+      set(val) {
+        this.query.datetime = Array.isArray(val) ? val.map(d => Utils.dateToUTC(d)) : null;
+      }
     }
   },
   watch: {
@@ -297,16 +307,12 @@ export default {
       immediate: true,
       deep: true,
       handler(value) {
-        let query = Object.assign(getQueryDefaults(), value);
-        if (Array.isArray(query.datetime)) {
-          query.datetime = query.datetime.map(Utils.dateFromUTC);
-        }
-        this.query = query;
+        this.query = Object.assign(getQueryDefaults(), value);
         if (this.collections.length > 0 && this.hasAllCollections) {
-          this.selectedCollections = this.collections.filter(c => query.collections.includes(c.value));
+          this.selectedCollections = this.collections.filter(c => this.query.collections.includes(c.value));
         }
         else {
-          this.selectedCollections = query.collections.map(id => {
+          this.selectedCollections = this.query.collections.map(id => {
             let collection = this.selectedCollections.find(c => c.value === id);
             return collection ? collection : this.collectionToMultiSelect({id});
           });
@@ -429,9 +435,10 @@ export default {
       };
     },
     prepareCollections(collections) {
+      const collator = new Intl.Collator(this.uiLanguage);
       return collections
         .map(this.collectionToMultiSelect)
-        .sort((a,b) => a.text.localeCompare(b.text, this.uiLanguage));
+        .sort((a,b) => collator.compare(a.text, b.text));
     },
     findQueryableLink(links) {
       return Utils.getLinksWithRels(links, ogcQueryables)
@@ -538,15 +545,6 @@ export default {
       }
       this.$set(this.query, 'bbox', bbox);
     },
-    setDateTime(datetime) {
-      if (datetime.find(dt => dt instanceof Date)) {
-        datetime = datetime.map(Utils.dateToUTC);
-      }
-      else {
-        datetime = null;
-      }
-      this.$set(this.query, 'datetime', datetime);
-    },
     addCollection(collection) {
       if (!this.collectionSelectOptions.taggable) {
         return;
@@ -580,8 +578,6 @@ export default {
 };
 </script>
 
-<style src=""></style>
-
 <style lang="scss">
 @import '../theme/variables.scss';
 
@@ -591,55 +587,9 @@ $primary-color: map-get($theme-colors, "primary");
 
 @import '~vue2-datepicker/scss/index.scss';
 
-// Multiselect related style
-@import '~vue-multiselect/dist/vue-multiselect.min.css';
-#stac-browser {
-  .multiselect__tags:focus-within {
-    border-color: #48cce1;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(24, 129, 145, 0.25);
-  }
-
-  .multiselect__select:before {
-    color: #495057;
-    border-color: #495057 transparent transparent;
-  }
-  
-  .multiselect__tags,
-  .multiselect__single {
-    border-color: #ced4da;
-    padding-left: 0.75rem;
-    font-size: 16px;
-  }
-
-  .multiselect__input,
-  .multiselect__single {
-    padding: 4px 0 3px 0;
-  }
-
-  .multiselect__tag,
-  .multiselect__tag-icon:hover,
-  .multiselect__option--highlight,
-  .multiselect__option--highlight:after {
-    background-color: map-get($theme-colors, "primary");
-  }
-
-  .multiselect__option--selected.multiselect__option--highlight,
-  .multiselect__option--selected.multiselect__option--highlight:after {
-    background-color: map-get($theme-colors, "secondary");
-  }
-
-  .multiselect__placeholder {
-    color: #999;
-    font-size: 16px;
-  }
-}
-
-.queryables {
-  .dropdown-menu {
-    max-height: 90vh;
-    overflow: auto;
-  }
+.queryables .dropdown-menu {
+  max-height: 90vh;
+  overflow: auto;
 }
 
 // General item filter style
